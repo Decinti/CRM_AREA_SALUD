@@ -366,7 +366,11 @@ export default function CalendarioView({ citas }: { citas: CitaConPaciente[] }) 
 
   function navegar(dir: 1 | -1) {
     const nueva = new Date(referencia)
-    vista === 'semana' ? nueva.setDate(nueva.getDate() + dir * 7) : nueva.setMonth(nueva.getMonth() + dir)
+    if (vista === 'semana') {
+      nueva.setDate(nueva.getDate() + dir * 7)
+    } else {
+      nueva.setMonth(nueva.getMonth() + dir)
+    }
     setReferencia(nueva)
   }
 
