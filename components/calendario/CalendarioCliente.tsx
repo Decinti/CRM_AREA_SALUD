@@ -224,8 +224,9 @@ export default function CalendarioCliente({
           }}
           buttonText={{ today: 'Hoy' }}
           height="calc(100vh - 210px)"
-          slotMinTime="07:00:00"
+          slotMinTime="09:00:00"
           slotMaxTime="21:00:00"
+          expandRows
           allDaySlot={false}
           nowIndicator
           events={eventos}
