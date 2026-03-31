@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { clientConfig } from '@/lib/config'
 import type { Paciente } from '@/types/paciente'
+import DeletePacienteButton from '@/components/pacientes/DeletePacienteButton'
 
 const GENERO_LABEL: Record<string, string> = {
   masculino: 'Masculino',
@@ -165,6 +166,10 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
           day: 'numeric',
         })}
       </p>
+
+      <div className="mt-10 pt-6 border-t border-gray-100">
+        <DeletePacienteButton id={p.id} nombre={nombreCompleto} />
+      </div>
     </div>
   )
 }
