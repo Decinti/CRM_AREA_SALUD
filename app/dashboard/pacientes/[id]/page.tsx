@@ -69,7 +69,7 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{nombreCompleto}</h1>
-            {p.alias && <p className="text-sm text-gray-400 mt-0.5 italic">"{p.alias}"</p>}
+            {p.alias && <p className="text-sm text-gray-400 mt-0.5 italic">&quot;{p.alias}&quot;</p>}
             {p.rut && <p className="text-sm text-gray-400 mt-0.5">RUT: {p.rut}</p>}
             <span
               className="inline-flex items-center mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium"

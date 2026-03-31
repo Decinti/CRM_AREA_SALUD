@@ -111,7 +111,7 @@ export default function ListaPacientes({ pacientes }: { pacientes: Paciente[] })
                     <Link href={`/dashboard/pacientes/${paciente.id}`} className="hover:underline">
                       <p className="text-sm font-medium text-gray-900">{paciente.nombre}</p>
                       {paciente.alias && (
-                        <p className="text-xs text-gray-400 mt-0.5 italic">"{paciente.alias}"</p>
+                        <p className="text-xs text-gray-400 mt-0.5 italic">&quot;{paciente.alias}&quot;</p>
                       )}
                       {paciente.fecha_nacimiento && (
                         <p className="text-xs text-gray-400 mt-0.5">
