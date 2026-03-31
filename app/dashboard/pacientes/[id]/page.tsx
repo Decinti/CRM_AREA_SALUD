@@ -45,7 +45,7 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
   const primary = clientConfig.colorPrimary
   const secondary = clientConfig.colorSecondary
 
-  const nombreCompleto = [p.nombre, p.apellido].filter(Boolean).join(' ')
+  const nombreCompleto = p.nombre
 
   return (
     <div className="p-4 md:p-8 max-w-2xl">
@@ -69,6 +69,7 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{nombreCompleto}</h1>
+            {p.alias && <p className="text-sm text-gray-400 mt-0.5 italic">"{p.alias}"</p>}
             {p.rut && <p className="text-sm text-gray-400 mt-0.5">RUT: {p.rut}</p>}
             <span
               className="inline-flex items-center mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -113,6 +114,7 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
         {/* Datos Personales */}
         <Seccion titulo="Datos Personales">
           <Fila label="Nombre completo" value={nombreCompleto} />
+          <Fila label="Alias" value={p.alias} />
           <Fila label="RUT" value={p.rut} />
           <Fila
             label="Fecha de nacimiento"

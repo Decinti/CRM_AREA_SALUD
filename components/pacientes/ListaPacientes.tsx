@@ -20,8 +20,8 @@ export default function ListaPacientes({ pacientes }: { pacientes: Paciente[] })
   const secondary = clientConfig.colorSecondary
 
   const pacientesFiltrados = pacientes.filter((p) => {
-    const nombreCompleto = [p.nombre, p.apellido].filter(Boolean).join(' ').toLowerCase()
-    const coincideNombre = nombreCompleto.includes(busqueda.toLowerCase())
+    const texto = [p.nombre, p.alias].filter(Boolean).join(' ').toLowerCase()
+    const coincideNombre = texto.includes(busqueda.toLowerCase())
     const coincideEstado = filtro === 'todos' || p.estado === filtro
     return coincideNombre && coincideEstado
   })
@@ -109,9 +109,10 @@ export default function ListaPacientes({ pacientes }: { pacientes: Paciente[] })
                 <tr key={paciente.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-4">
                     <Link href={`/dashboard/pacientes/${paciente.id}`} className="hover:underline">
-                      <p className="text-sm font-medium text-gray-900">
-                        {[paciente.nombre, paciente.apellido].filter(Boolean).join(' ')}
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">{paciente.nombre}</p>
+                      {paciente.alias && (
+                        <p className="text-xs text-gray-400 mt-0.5 italic">"{paciente.alias}"</p>
+                      )}
                       {paciente.fecha_nacimiento && (
                         <p className="text-xs text-gray-400 mt-0.5">
                           {new Date(paciente.fecha_nacimiento + 'T00:00:00').toLocaleDateString('es-CL', {

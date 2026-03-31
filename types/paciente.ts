@@ -4,7 +4,7 @@ export interface Paciente {
   id: string
   // Datos personales
   nombre: string
-  apellido: string | null
+  alias: string | null
   rut: string | null
   fecha_nacimiento: string | null
   genero: string | null
@@ -30,7 +30,7 @@ export interface Paciente {
 export interface PacienteFormData {
   // Datos personales
   nombre: string
-  apellido: string
+  alias: string
   rut: string
   fecha_nacimiento: string
   genero: string

@@ -13,7 +13,7 @@ interface Props {
 
 const camposVacios: PacienteFormData = {
   nombre: '',
-  apellido: '',
+  alias: '',
   rut: '',
   fecha_nacimiento: '',
   genero: '',
@@ -34,7 +34,7 @@ const camposVacios: PacienteFormData = {
 function fromPaciente(p: Paciente): PacienteFormData {
   return {
     nombre: p.nombre,
-    apellido: p.apellido ?? '',
+    alias: p.alias ?? '',
     rut: p.rut ?? '',
     fecha_nacimiento: p.fecha_nacimiento ?? '',
     genero: p.genero ?? '',
@@ -77,7 +77,6 @@ export default function FormPaciente({ paciente, modo }: Props) {
   function validar() {
     const nuevosErrores: typeof errores = {}
     if (!form.nombre.trim()) nuevosErrores.nombre = 'El nombre es obligatorio.'
-    if (!form.apellido.trim()) nuevosErrores.apellido = 'El apellido es obligatorio.'
     setErrores(nuevosErrores)
     return Object.keys(nuevosErrores).length === 0
   }
@@ -92,7 +91,7 @@ export default function FormPaciente({ paciente, modo }: Props) {
     const supabase = createClient()
     const payload = {
       nombre: form.nombre.trim(),
-      apellido: form.apellido.trim() || null,
+      alias: form.alias.trim() || null,
       rut: form.rut.trim() || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
       genero: form.genero || null,
@@ -147,24 +146,24 @@ export default function FormPaciente({ paciente, modo }: Props) {
       {/* Datos Personales */}
       <Seccion titulo="Datos Personales">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y divide-gray-50">
-          <Campo label="Nombre *" error={errores.nombre} className="sm:border-r sm:border-gray-50">
+          <Campo label="Nombre completo *" error={errores.nombre} className="sm:border-r sm:border-gray-50">
             <input
               type="text"
               name="nombre"
               value={form.nombre}
               onChange={handleChange}
-              placeholder="Nombre"
+              placeholder="Nombre y apellido"
               className={inputClass(!!errores.nombre)}
             />
           </Campo>
-          <Campo label="Apellido *" error={errores.apellido}>
+          <Campo label="Alias">
             <input
               type="text"
-              name="apellido"
-              value={form.apellido}
+              name="alias"
+              value={form.alias}
               onChange={handleChange}
-              placeholder="Apellido"
-              className={inputClass(!!errores.apellido)}
+              placeholder="Ej: la señora del martes..."
+              className={inputClass(false)}
             />
           </Campo>
         </div>
