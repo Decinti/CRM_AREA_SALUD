@@ -41,7 +41,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 flex flex-col bg-white border-r border-gray-100 shrink-0">
+    <aside className="hidden md:flex w-60 flex-col bg-white border-r border-gray-100 shrink-0">
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div

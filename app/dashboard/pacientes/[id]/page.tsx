@@ -48,7 +48,7 @@ export default async function FichaPacientePage({ params }: { params: { id: stri
   const nombreCompleto = [p.nombre, p.apellido].filter(Boolean).join(' ')
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 md:p-8 max-w-2xl">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm text-gray-400">
         <Link href="/dashboard/pacientes" className="hover:text-gray-600 transition-colors">

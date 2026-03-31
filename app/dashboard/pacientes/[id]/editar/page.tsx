@@ -17,7 +17,7 @@ export default async function EditarPacientePage({ params }: { params: { id: str
   const p = paciente as Paciente
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 md:p-8 max-w-2xl">
       <div className="flex items-center gap-2 mb-6 text-sm text-gray-400">
         <Link href="/dashboard/pacientes" className="hover:text-gray-600 transition-colors">
           Pacientes
