@@ -353,7 +353,6 @@ export default function CalendarioCliente({
           moreLinkContent={(arg) => `+${arg.num} más`}
           moreLinkClick={(arg) => {
             openDayPanel(toDateKey((arg as { date: Date }).date))
-            return false
           }}
         />
       </div>
