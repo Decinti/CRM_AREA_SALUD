@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import timeGridPlugin from '@fullcalendar/timegrid'
+import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import esLocale from '@fullcalendar/core/locales/es'
-import type { EventClickArg, EventInput } from '@fullcalendar/core'
+import type { EventClickArg, EventContentArg, EventInput } from '@fullcalendar/core'
 import type { DateClickArg } from '@fullcalendar/interaction'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -17,21 +17,45 @@ interface PacienteOpcion {
   nombre: string
 }
 
-interface EventoDetalle {
-  id: string
-  nombrePaciente: string
-  pacienteId: string | null
-  fechaInicio: string
-  fechaFin: string
-  estado: string
-  tipoCita: string | null
-  meetLink: string | null
-}
-
 interface NuevaCitaForm {
   pacienteId: string
-  fechaInicio: string
+  fecha: string
+  hora: string
   duracion: number
+}
+
+const ESTADO_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  confirmada: { bg: 'bg-green-100', text: 'text-green-700', label: 'Confirmada' },
+  cancelada: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelada' },
+  reagendada: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Reagendada' },
+  completada: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Completada' },
+}
+
+function toDateKey(date: Date | string): string {
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatHora(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatFechaTitulo(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const str = date.toLocaleDateString('es-CL', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return `rgba(99, 102, 241, ${alpha})`
+  return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`
 }
 
 function citaToEvent(cita: CitaConPaciente, color: string): EventInput {
@@ -43,40 +67,8 @@ function citaToEvent(cita: CitaConPaciente, color: string): EventInput {
     backgroundColor: color,
     borderColor: color,
     textColor: '#ffffff',
-    extendedProps: {
-      pacienteId: cita.paciente_id,
-      estado: cita.estado,
-      tipoCita: cita.tipo_cita,
-      meetLink: cita.meet_link,
-      nombrePaciente: cita.pacientes?.nombre ?? 'Sin nombre',
-    },
+    extendedProps: { citaId: cita.id },
   }
-}
-
-function formatFechaHora(iso: string): string {
-  return new Date(iso).toLocaleString('es-CL', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function calcularDuracion(inicio: string, fin: string): string {
-  const diff = Math.round((new Date(fin).getTime() - new Date(inicio).getTime()) / 60000)
-  if (diff < 60) return `${diff} minutos`
-  const h = Math.floor(diff / 60)
-  const m = diff % 60
-  return m > 0 ? `${h}h ${m}min` : `${h} hora${h > 1 ? 's' : ''}`
-}
-
-const ESTADO_BADGE: Record<string, string> = {
-  confirmada: 'bg-green-100 text-green-700',
-  cancelada: 'bg-red-100 text-red-700',
-  reagendada: 'bg-yellow-100 text-yellow-700',
-  completada: 'bg-indigo-100 text-indigo-700',
 }
 
 export default function CalendarioCliente({
@@ -88,21 +80,40 @@ export default function CalendarioCliente({
 }) {
   const router = useRouter()
   const primary = clientConfig.colorPrimary
+  const primaryLight = hexToRgba(primary, 0.08)
 
+  const [citas, setCitas] = useState<CitaConPaciente[]>(citasIniciales)
   const [eventos, setEventos] = useState<EventInput[]>(
     citasIniciales.map((c) => citaToEvent(c, primary))
   )
-  const [eventoSeleccionado, setEventoSeleccionado] = useState<EventoDetalle | null>(null)
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedCita, setSelectedCita] = useState<CitaConPaciente | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+
   const [modalAbierto, setModalAbierto] = useState(false)
   const [nuevaCita, setNuevaCita] = useState<NuevaCitaForm>({
     pacienteId: '',
-    fechaInicio: '',
-    duracion: 60,
+    fecha: '',
+    hora: '',
+    duracion: 30,
   })
   const [guardando, setGuardando] = useState(false)
   const [errorModal, setErrorModal] = useState('')
 
-  // Suscripción Realtime a la tabla citas
+  // Agrupación de citas por día (clave YYYY-MM-DD local)
+  const citasMap = useMemo(() => {
+    const map = new Map<string, CitaConPaciente[]>()
+    for (const cita of citas) {
+      const key = toDateKey(cita.fecha_inicio)
+      const arr = map.get(key) ?? []
+      arr.push(cita)
+      map.set(key, arr)
+    }
+    return map
+  }, [citas])
+
+  // Suscripción Realtime — igual que antes para recibir citas de Cal.com
   useEffect(() => {
     const supabase = createClient()
 
@@ -118,7 +129,9 @@ export default function CalendarioCliente({
             .eq('id', payload.new.id)
             .single()
           if (data) {
-            setEventos((prev) => [...prev, citaToEvent(data as CitaConPaciente, primary)])
+            const cita = data as CitaConPaciente
+            setCitas((prev) => [...prev, cita])
+            setEventos((prev) => [...prev, citaToEvent(cita, primary)])
           }
         }
       )
@@ -132,11 +145,12 @@ export default function CalendarioCliente({
             .eq('id', payload.new.id)
             .single()
           if (data) {
+            const cita = data as CitaConPaciente
+            setCitas((prev) => prev.map((c) => (c.id === cita.id ? cita : c)))
             setEventos((prev) =>
-              prev.map((e) =>
-                e.id === payload.new.id ? citaToEvent(data as CitaConPaciente, primary) : e
-              )
+              prev.map((e) => (e.id === cita.id ? citaToEvent(cita, primary) : e))
             )
+            setSelectedCita((prev) => (prev?.id === cita.id ? cita : prev))
           }
         }
       )
@@ -147,47 +161,51 @@ export default function CalendarioCliente({
     }
   }, [primary])
 
-  function handleEventClick(info: EventClickArg) {
-    const p = info.event.extendedProps
-    setEventoSeleccionado({
-      id: info.event.id,
-      nombrePaciente: p.nombrePaciente as string,
-      pacienteId: p.pacienteId as string | null,
-      fechaInicio: info.event.startStr,
-      fechaFin: info.event.endStr,
-      estado: p.estado as string,
-      tipoCita: p.tipoCita as string | null,
-      meetLink: p.meetLink as string | null,
-    })
+  function openDayPanel(dateKey: string) {
+    setSelectedDate(dateKey)
+    setSelectedCita(null)
+    setPanelOpen(true)
+  }
+
+  function closePanel() {
+    setPanelOpen(false)
+    // Limpiar estado después de la animación de salida
+    setTimeout(() => {
+      setSelectedDate(null)
+      setSelectedCita(null)
+    }, 300)
   }
 
   function handleDateClick(info: DateClickArg) {
-    const d = info.date
-    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16)
+    openDayPanel(toDateKey(info.date))
+  }
+
+  function handleEventClick(info: EventClickArg) {
+    info.jsEvent.preventDefault()
+    openDayPanel(toDateKey(info.event.start!))
+  }
+
+  function openNuevaCitaModal() {
+    const today = new Date()
     setNuevaCita({
       pacienteId: pacientes[0]?.id ?? '',
-      fechaInicio: local,
-      duracion: 60,
+      fecha: selectedDate ?? toDateKey(today),
+      hora: `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`,
+      duracion: 30,
     })
     setErrorModal('')
     setModalAbierto(true)
   }
 
   async function handleGuardarCita() {
-    if (!nuevaCita.pacienteId) {
-      setErrorModal('Selecciona un paciente.')
-      return
-    }
-    if (!nuevaCita.fechaInicio) {
-      setErrorModal('Ingresa una fecha y hora.')
-      return
-    }
+    if (!nuevaCita.pacienteId) { setErrorModal('Selecciona un paciente.'); return }
+    if (!nuevaCita.fecha) { setErrorModal('Ingresa una fecha.'); return }
+    if (!nuevaCita.hora) { setErrorModal('Ingresa una hora.'); return }
+
     setGuardando(true)
     setErrorModal('')
 
-    const inicio = new Date(nuevaCita.fechaInicio)
+    const inicio = new Date(`${nuevaCita.fecha}T${nuevaCita.hora}:00`)
     const fin = new Date(inicio.getTime() + nuevaCita.duracion * 60000)
     const supabase = createClient()
 
@@ -206,16 +224,119 @@ export default function CalendarioCliente({
     setModalAbierto(false)
   }
 
-  return (
-    <div className="relative">
-      {/* Contenedor del calendario — se estrecha cuando el panel lateral está abierto */}
+  function renderEventContent(arg: EventContentArg) {
+    return (
       <div
-        className="transition-all duration-300"
-        style={{ marginRight: eventoSeleccionado ? 320 : 0 }}
+        className="w-full px-1.5 py-0.5 rounded text-xs font-medium text-white truncate cursor-pointer select-none"
+        style={{ backgroundColor: primary }}
       >
+        {arg.event.title}
+      </div>
+    )
+  }
+
+  const sortedCitasDelDia = useMemo(() => {
+    if (!selectedDate) return []
+    const arr = citasMap.get(selectedDate) ?? []
+    return [...arr].sort(
+      (a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+    )
+  }, [citasMap, selectedDate])
+
+  return (
+    <div className="relative flex">
+      {/* ─── Área del calendario ─── */}
+      <div
+        className="flex-1 min-w-0 transition-all duration-300"
+        style={{ marginRight: panelOpen ? 320 : 0 }}
+      >
+        {/* Botón "+ Nueva cita" */}
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={openNuevaCitaModal}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: primary }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva cita
+          </button>
+        </div>
+
+        {/* Estilos personalizados de FullCalendar */}
+        <style>{`
+          .fc-day-today {
+            background-color: ${primaryLight} !important;
+          }
+          .fc-day-today .fc-daygrid-day-number {
+            background-color: ${primary};
+            color: #fff !important;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            padding: 0 !important;
+            margin: 4px;
+          }
+          .fc-daygrid-day-number {
+            font-size: 0.8125rem !important;
+            color: #374151 !important;
+            text-decoration: none !important;
+            padding: 6px 8px !important;
+          }
+          .fc-daygrid-day { cursor: pointer; }
+          .fc-event { border: none !important; background: transparent !important; padding: 1px 2px; }
+          .fc-event-main { padding: 0 !important; }
+          .fc-daygrid-event-harness { margin-bottom: 1px !important; }
+          .fc-daygrid-more-link {
+            font-size: 0.7rem !important;
+            color: #6b7280 !important;
+            background: #f3f4f6;
+            border-radius: 4px;
+            padding: 1px 5px;
+            margin: 1px 2px;
+          }
+          .fc-daygrid-more-link:hover { background: #e5e7eb; }
+          .fc-toolbar-title {
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            color: #111827 !important;
+          }
+          .fc-button {
+            background-color: #fff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #374151 !important;
+            border-radius: 8px !important;
+            font-size: 0.8rem !important;
+            padding: 0.3rem 0.7rem !important;
+            box-shadow: none !important;
+            font-weight: 500 !important;
+          }
+          .fc-button:hover { background-color: #f9fafb !important; }
+          .fc-button:focus { box-shadow: none !important; }
+          .fc-button-active, .fc-button:active { background-color: #f3f4f6 !important; }
+          .fc-col-header-cell { padding: 8px 0 !important; }
+          .fc-col-header-cell-cushion {
+            font-size: 0.7rem !important;
+            font-weight: 600 !important;
+            color: #9ca3af !important;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none !important;
+          }
+          .fc-scrollgrid { border: none !important; }
+          .fc-scrollgrid-section > td { border: none !important; }
+          .fc-scrollgrid td, .fc-scrollgrid th { border-color: #f3f4f6 !important; }
+          .fc-popover { display: none !important; }
+        `}</style>
+
         <FullCalendar
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
           locale={esLocale}
           headerToolbar={{
             left: 'prev,next today',
@@ -223,33 +344,48 @@ export default function CalendarioCliente({
             right: '',
           }}
           buttonText={{ today: 'Hoy' }}
-          height="calc(100vh - 210px)"
-          slotMinTime="09:00:00"
-          slotMaxTime="21:00:00"
-          expandRows
-          allDaySlot={false}
-          nowIndicator
+          height="calc(100vh - 220px)"
           events={eventos}
           eventClick={handleEventClick}
           dateClick={handleDateClick}
-          eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-          slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+          dayMaxEvents={3}
+          eventContent={renderEventContent}
+          moreLinkContent={(arg) => `+${arg.num} más`}
+          moreLinkClick={(arg) => {
+            openDayPanel(toDateKey((arg as { date: Date }).date))
+            return false
+          }}
         />
       </div>
 
-      {/* Panel lateral de detalle de cita */}
+      {/* ─── Panel lateral ─── */}
       <div
-        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-30 flex flex-col transition-transform duration-300 ${
-          eventoSeleccionado ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full bg-white z-30 flex flex-col
+          transition-transform duration-300 ease-out border-l border-gray-100
+          w-full md:w-80 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        {eventoSeleccionado && (
+        {panelOpen && selectedDate && (
           <>
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
-              <h2 className="text-base font-semibold text-gray-900">Detalle de cita</h2>
+            {/* Cabecera del panel */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2 shrink-0">
+              {selectedCita && (
+                <button
+                  onClick={() => setSelectedCita(null)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors shrink-0"
+                  aria-label="Volver"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h2 className="flex-1 min-w-0 text-sm font-semibold text-gray-900 truncate">
+                {selectedCita ? 'Detalle de cita' : formatFechaTitulo(selectedDate)}
+              </h2>
               <button
-                onClick={() => setEventoSeleccionado(null)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                onClick={closePanel}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors shrink-0"
+                aria-label="Cerrar panel"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -257,88 +393,165 @@ export default function CalendarioCliente({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Paciente</p>
-                <p className="text-base font-semibold text-gray-900">{eventoSeleccionado.nombrePaciente}</p>
-              </div>
+            {/* Cuerpo del panel */}
+            <div className="flex-1 overflow-y-auto">
+              {selectedCita ? (
+                /* Vista de detalle */
+                <div className="px-5 py-5 space-y-5">
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                      Paciente
+                    </p>
+                    <p className="text-base font-semibold text-gray-900">
+                      {selectedCita.pacientes?.nombre ?? 'Sin nombre'}
+                    </p>
+                  </div>
 
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Fecha y hora</p>
-                <p className="text-sm text-gray-700 capitalize">
-                  {formatFechaHora(eventoSeleccionado.fechaInicio)}
-                </p>
-              </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                      Horario
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      {formatHora(selectedCita.fecha_inicio)} – {formatHora(selectedCita.fecha_fin)}
+                    </p>
+                  </div>
 
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Duración</p>
-                <p className="text-sm text-gray-700">
-                  {calcularDuracion(eventoSeleccionado.fechaInicio, eventoSeleccionado.fechaFin)}
-                </p>
-              </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                      Estado
+                    </p>
+                    {(() => {
+                      const badge =
+                        ESTADO_BADGE[selectedCita.estado] ?? {
+                          bg: 'bg-gray-100',
+                          text: 'text-gray-600',
+                          label: selectedCita.estado,
+                        }
+                      return (
+                        <span
+                          className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${badge.bg} ${badge.text}`}
+                        >
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
+                  </div>
 
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Estado</p>
-                <span
-                  className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
-                    ESTADO_BADGE[eventoSeleccionado.estado] ?? 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {eventoSeleccionado.estado}
-                </span>
-              </div>
+                  {selectedCita.tipo_cita && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                        Tipo
+                      </p>
+                      <p className="text-sm text-gray-700">{selectedCita.tipo_cita}</p>
+                    </div>
+                  )}
 
-              {eventoSeleccionado.tipoCita && (
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Tipo</p>
-                  <p className="text-sm text-gray-700">{eventoSeleccionado.tipoCita}</p>
+                  {selectedCita.meet_link && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                        Google Meet
+                      </p>
+                      <a
+                        href={selectedCita.meet_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        Unirse a la reunión
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {selectedCita.paciente_id && (
+                    <div className="pt-2">
+                      <button
+                        onClick={() =>
+                          router.push(`/dashboard/pacientes/${selectedCita.paciente_id}`)
+                        }
+                        className="w-full py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                        style={{ backgroundColor: primary }}
+                      >
+                        Ver ficha del paciente
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {eventoSeleccionado.meetLink && (
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Reunión</p>
-                  <a
-                    href={eventoSeleccionado.meetLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Unirse a la reunión →
-                  </a>
+              ) : (
+                /* Vista de lista */
+                <div className="py-2">
+                  {sortedCitasDelDia.length === 0 ? (
+                    <div className="px-5 py-12 flex flex-col items-center gap-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-500">Sin citas para este día</p>
+                      <button
+                        onClick={openNuevaCitaModal}
+                        className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                        style={{ backgroundColor: primary }}
+                      >
+                        + Agendar cita
+                      </button>
+                    </div>
+                  ) : (
+                    sortedCitasDelDia.map((cita) => {
+                      const badge =
+                        ESTADO_BADGE[cita.estado] ?? {
+                          bg: 'bg-gray-100',
+                          text: 'text-gray-600',
+                          label: cita.estado,
+                        }
+                      return (
+                        <button
+                          key={cita.id}
+                          onClick={() => setSelectedCita(cita)}
+                          className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                        >
+                          <div
+                            className="w-0.5 self-stretch rounded-full shrink-0"
+                            style={{ backgroundColor: primary }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {cita.pacientes?.nombre ?? 'Sin nombre'}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {formatHora(cita.fecha_inicio)}
+                            </p>
+                          </div>
+                          <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${badge.bg} ${badge.text}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </button>
+                      )
+                    })
+                  )}
                 </div>
-              )}
-            </div>
-
-            <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-              {eventoSeleccionado.pacienteId && (
-                <button
-                  onClick={() =>
-                    router.push(`/dashboard/pacientes/${eventoSeleccionado.pacienteId}`)
-                  }
-                  className="w-full py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: primary }}
-                >
-                  Ver ficha del paciente
-                </button>
               )}
             </div>
           </>
         )}
       </div>
 
-      {/* Backdrop en móvil para cerrar panel */}
-      {eventoSeleccionado && (
+      {/* Backdrop móvil para cerrar el panel */}
+      {panelOpen && (
         <div
-          className="fixed inset-0 z-20 md:hidden"
-          onClick={() => setEventoSeleccionado(null)}
+          className="fixed inset-0 z-20 md:hidden bg-black/20"
+          onClick={closePanel}
         />
       )}
 
-      {/* Modal para crear nueva cita */}
+      {/* ─── Modal: Nueva cita ─── */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
             <div className="px-6 py-5 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Nueva cita</h2>
             </div>
@@ -366,13 +579,27 @@ export default function CalendarioCliente({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Fecha y hora
+                  Fecha
                 </label>
                 <input
-                  type="datetime-local"
-                  value={nuevaCita.fechaInicio}
+                  type="date"
+                  value={nuevaCita.fecha}
                   onChange={(e) =>
-                    setNuevaCita((p) => ({ ...p, fechaInicio: e.target.value }))
+                    setNuevaCita((p) => ({ ...p, fecha: e.target.value }))
+                  }
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Hora de inicio
+                </label>
+                <input
+                  type="time"
+                  value={nuevaCita.hora}
+                  onChange={(e) =>
+                    setNuevaCita((p) => ({ ...p, hora: e.target.value }))
                   }
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                 />
@@ -391,9 +618,6 @@ export default function CalendarioCliente({
                 >
                   <option value={30}>30 minutos</option>
                   <option value={45}>45 minutos</option>
-                  <option value={60}>1 hora</option>
-                  <option value={90}>1 hora 30 minutos</option>
-                  <option value={120}>2 horas</option>
                 </select>
               </div>
 
