@@ -6,6 +6,9 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 ## Screenshots
 
+**Log in**
+![Pantalla de inicio de sesion](docs/screenshots/login.png)
+
 **Dashboard**
 ![Dashboard principal](docs/screenshots/dashboard.png)
 
@@ -14,6 +17,7 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 **Ficha de paciente**
 ![Ficha de paciente](docs/screenshots/pacientes-ficha.png)
+![Ficha de paciente](docs/screenshots/pacientes-ficha2.png)
 
 **Calendario de citas**
 ![Calendario](docs/screenshots/calendario.png)
