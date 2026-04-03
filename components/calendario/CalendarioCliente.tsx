@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -104,6 +104,9 @@ export default function CalendarioCliente({
   const [modalEliminar, setModalEliminar] = useState(false)
   const [eliminando, setEliminando] = useState(false)
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  const calendarAreaRef = useRef<HTMLDivElement>(null)
+
   // Agrupación de citas por día (clave YYYY-MM-DD local)
   const citasMap = useMemo(() => {
     const map = new Map<string, CitaConPaciente[]>()
@@ -163,6 +166,23 @@ export default function CalendarioCliente({
       supabase.removeChannel(channel)
     }
   }, [primary])
+
+  // Cierra el panel al hacer click fuera del calendario y del panel lateral
+  useEffect(() => {
+    if (!panelOpen) return
+
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node
+      if (
+        panelRef.current?.contains(target) ||
+        calendarAreaRef.current?.contains(target)
+      ) return
+      closePanel()
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [panelOpen])
 
   function openDayPanel(dateKey: string) {
     setSelectedDate(dateKey)
@@ -277,6 +297,7 @@ export default function CalendarioCliente({
     <div className="relative flex">
       {/* ─── Área del calendario ─── */}
       <div
+        ref={calendarAreaRef}
         className="flex-1 min-w-0 transition-all duration-300"
         style={{ marginRight: panelOpen ? 320 : 0 }}
       >
@@ -389,6 +410,7 @@ export default function CalendarioCliente({
 
       {/* ─── Panel lateral ─── */}
       <div
+        ref={panelRef}
         className={`fixed top-0 right-0 h-full bg-white z-30 flex flex-col
           transition-transform duration-300 ease-out border-l border-gray-100
           w-full md:w-80 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}
