@@ -176,6 +176,6 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ## 👤 Autor y contacto
 
-**Autor:** [Bruno Alonso Decinti Villarroel]
-**LinkedIn:** [https://www.linkedin.com/in/bruno-decinti-507a762a8/]
-**Email:** [brunodecinti2013@gmail.com]
+**Autor:** Bruno Alonso Decinti Villarroel
+**LinkedIn:** https://www.linkedin.com/in/bruno-decinti-507a762a8/
+**Email:** brunodecinti2013@gmail.com
