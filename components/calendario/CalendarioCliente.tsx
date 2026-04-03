@@ -225,10 +225,15 @@ export default function CalendarioCliente({
     setEliminando(true)
     const supabase = createClient()
 
-    const { error } = await supabase.from('citas').delete().eq('id', selectedCita.id)
+    const { error, count } = await supabase
+      .from('citas')
+      .delete({ count: 'exact' })
+      .eq('id', selectedCita.id)
 
     setEliminando(false)
-    if (error) {
+
+    // Si hay error o no se eliminó ninguna fila (falta política RLS de DELETE)
+    if (error || count === 0) {
       setModalEliminar(false)
       return
     }
