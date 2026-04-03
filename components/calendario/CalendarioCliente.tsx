@@ -223,17 +223,22 @@ export default function CalendarioCliente({
   async function handleEliminarCita() {
     if (!selectedCita) return
     setEliminando(true)
-    const supabase = createClient()
 
-    const { error, count } = await supabase
-      .from('citas')
-      .delete({ count: 'exact' })
-      .eq('id', selectedCita.id)
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancel-booking`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ citaId: selectedCita.id }),
+      }
+    )
 
     setEliminando(false)
 
-    // Si hay error o no se eliminó ninguna fila (falta política RLS de DELETE)
-    if (error || count === 0) {
+    if (!res.ok) {
       setModalEliminar(false)
       return
     }
