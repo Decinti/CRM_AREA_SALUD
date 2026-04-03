@@ -1,10 +1,8 @@
-import nextDynamic from 'next/dynamic'
+import dynamic from 'next/dynamic'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import type { CitaConPaciente } from '@/types/cita'
 
-export const dynamic = 'force-dynamic'
-
-const CalendarioCliente = nextDynamic(
+const CalendarioCliente = dynamic(
   () => import('@/components/calendario/CalendarioCliente'),
   {
     ssr: false,

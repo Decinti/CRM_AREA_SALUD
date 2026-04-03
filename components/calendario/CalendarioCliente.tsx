@@ -242,6 +242,7 @@ export default function CalendarioCliente({
     setEventos((prev) => prev.filter((e) => e.id !== selectedCita.id))
     setModalEliminar(false)
     closePanel()
+    router.refresh()
   }
 
   async function handleGuardarCita() {
@@ -277,6 +278,7 @@ export default function CalendarioCliente({
     setCitas((prev) => [...prev, nuevaCitaInsertada])
     setEventos((prev) => [...prev, citaToEvent(nuevaCitaInsertada, primary)])
     setModalAbierto(false)
+    router.refresh()
   }
 
   function renderEventContent(arg: EventContentArg) {
