@@ -20,20 +20,32 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 ---
 
-## ✅ Funcionalidades principales
+## Funcionalidades principales
 
 - **Autenticación segura** — Inicio de sesión con email y contraseña. Las rutas del dashboard están protegidas y redirigen al login si no hay sesión activa.
-- **Dashboard con métricas** — Vista resumen que muestra el total de pacientes activos e inactivos del consultorio.
-- **Gestión completa de pacientes** — Crear, editar, ver y eliminar fichas de pacientes con información personal, de contacto, contacto de emergencia y datos administrativos del consultorio.
+
+- **Dashboard con métricas** — Vista resumen que muestra el total de pacientes activos e inactivos del consultorio. (por mejorar)
+
+- **Gestión completa de pacientes** — Crear, editar, ver y eliminar fichas de pacientes con información personal, de contacto, contacto de emergencia y datos administrativos del consultorio. El expediente del paciente no se considera en esta informacion actualmente, solo una referencia del N° de Expediente, nada mas.
+
 - **Ficha clínica detallada** — Cada paciente tiene una ficha con: nombre, alias, RUT, fecha de nacimiento, género, seguro médico, teléfonos, correo, dirección, contacto de emergencia, número de expediente físico, canal de llegada y notas generales.
+
 - **Acceso rápido a WhatsApp** — Desde la ficha de cada paciente, botón directo para abrir una conversación de WhatsApp con su número registrado.
-- **Estado de paciente** — Cada paciente puede marcarse como Activo o Inactivo para filtrar la lista de trabajo.
+
+- **Estado de paciente** — Cada paciente puede marcarse como Activo o Inactivo para filtrar la lista de trabajo. Los pacientes inactivos son los que se dieron de alta o no volvieron a consultar.
+
 - **Calendario mensual interactivo** — Visualización de todas las citas en un calendario tipo Google Calendar, con navegación por mes.
-- **Creación manual de citas** — El profesional puede agendar citas directamente desde el CRM, seleccionando paciente, fecha, hora y duración.
+
+- **Creación manual de citas** — El usuario puede agendar citas directamente desde el CRM, seleccionando paciente, fecha, hora y duración. La fecha se puede preseleccionar clickeando el dia en el que se quiere crear la cita.
+
 - **Eliminación de citas con confirmación** — Las citas pueden eliminarse desde el detalle del panel lateral, con un modal de doble confirmación para evitar borrados accidentales.
-- **Sincronización automática con Cal.com** — Las reservas realizadas por pacientes a través de Cal.com se registran automáticamente en el sistema mediante un webhook. Si el paciente no existe, se crea automáticamente.
+
+- **Sincronización automática con Cal.com** — Las reservas realizadas por pacientes a través de Cal.com se registran automáticamente en el sistema mediante un webhook. Si el paciente no existe, se crea automáticamente segun si esque el mail que se uso para registrar la cita ya existia o no en la tabla de clientes.
+
 - **Soporte para videollamadas** — Las citas originadas desde Cal.com que incluyen Google Meet muestran el enlace directo para unirse a la reunión.
-- **Diseño responsive** — Interfaz adaptada para escritorio y móvil, con navegación inferior en dispositivos pequeños y barra lateral en pantallas grandes.
+
+- **Diseño responsive** — Interfaz adaptada para escritorio y móvil, con barra inferior en dispositivos pequeños y barra lateral en pantallas grandes. (la barra en donde dice dashboard, pacientes y calendario)
+
 - **Personalización por cliente** — El nombre del consultorio, especialidad, logo y colores de marca son configurables por variables de entorno, sin tocar el código.
 
 ---
@@ -65,7 +77,7 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 ---
 
-## 🚀 Instalación y uso local
+## Instalación y uso local
 
 ### Requisitos previos
 
@@ -95,7 +107,7 @@ Copia el archivo de ejemplo y completa los valores:
 cp .env.example .env.local
 ```
 
-Edita `.env.local` con los datos de tu proyecto Supabase (ver sección [Variables de entorno](#️-variables-de-entorno)).
+Edita `.env.local` con los datos de tu proyecto Supabase (ver sección [Variables de entorno](#-variables-de-entorno)).
 
 ### 4. Configurar la base de datos en Supabase
 
@@ -164,6 +176,6 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ## 👤 Autor y contacto
 
-**Autor:** [Tu nombre]
-**LinkedIn:** [URL de tu perfil de LinkedIn]
-**Email:** [tu@email.com]
+**Autor:** [Bruno Alonso Decinti Villarroel]
+**LinkedIn:** [https://www.linkedin.com/in/bruno-decinti-507a762a8/]
+**Email:** [brunodecinti2013@gmail.com]
