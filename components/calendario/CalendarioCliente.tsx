@@ -224,17 +224,11 @@ export default function CalendarioCliente({
     if (!selectedCita) return
     setEliminando(true)
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancel-booking`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ citaId: selectedCita.id }),
-      }
-    )
+    const res = await fetch('/api/cancel-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ citaId: selectedCita.id }),
+    })
 
     setEliminando(false)
 
