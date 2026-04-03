@@ -209,18 +209,26 @@ export default function CalendarioCliente({
     const fin = new Date(inicio.getTime() + nuevaCita.duracion * 60000)
     const supabase = createClient()
 
-    const { error } = await supabase.from('citas').insert({
-      paciente_id: nuevaCita.pacienteId,
-      fecha_inicio: inicio.toISOString(),
-      fecha_fin: fin.toISOString(),
-      estado: 'confirmada',
-    })
+    const { data: citaInsertada, error } = await supabase
+      .from('citas')
+      .insert({
+        paciente_id: nuevaCita.pacienteId,
+        fecha_inicio: inicio.toISOString(),
+        fecha_fin: fin.toISOString(),
+        estado: 'confirmada',
+      })
+      .select('*, pacientes(nombre)')
+      .single()
 
     setGuardando(false)
-    if (error) {
+    if (error || !citaInsertada) {
       setErrorModal('No se pudo guardar la cita. Intenta nuevamente.')
       return
     }
+
+    const nuevaCitaInsertada = citaInsertada as CitaConPaciente
+    setCitas((prev) => [...prev, nuevaCitaInsertada])
+    setEventos((prev) => [...prev, citaToEvent(nuevaCitaInsertada, primary)])
     setModalAbierto(false)
   }
 

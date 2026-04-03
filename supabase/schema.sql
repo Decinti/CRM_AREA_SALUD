@@ -44,3 +44,17 @@ create policy "usuario autenticado puede actualizar pacientes"
   to authenticated
   using (true)
   with check (true);
+
+
+  ALTER TABLE pacientes
+  ADD COLUMN IF NOT EXISTS apellido text,
+  ADD COLUMN IF NOT EXISTS rut text,
+  ADD COLUMN IF NOT EXISTS genero text,
+  ADD COLUMN IF NOT EXISTS seguro_medico text,
+  ADD COLUMN IF NOT EXISTS telefono_alternativo text,
+  ADD COLUMN IF NOT EXISTS direccion text,
+  ADD COLUMN IF NOT EXISTS contacto_emergencia_nombre text,
+  ADD COLUMN IF NOT EXISTS contacto_emergencia_parentesco text,
+  ADD COLUMN IF NOT EXISTS contacto_emergencia_telefono text,
+  ADD COLUMN IF NOT EXISTS numero_expediente text,
+  ADD COLUMN IF NOT EXISTS como_llego text;
