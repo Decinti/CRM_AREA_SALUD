@@ -4,7 +4,7 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 **Dashboard**
 ![Dashboard principal](docs/screenshots/dashboard.png)
@@ -50,7 +50,7 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 
 ---
 
-## 🛠️ Stack tecnológico
+## Stack tecnológico
 
 ### Frontend
 | Tecnología | Versión | Uso |
