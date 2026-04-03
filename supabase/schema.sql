@@ -110,6 +110,12 @@ create policy "usuario autenticado puede actualizar citas"
   using (true)
   with check (true);
 
+-- Política: usuarios autenticados del CRM pueden eliminar citas
+create policy "usuario autenticado puede eliminar citas"
+  on citas for delete
+  to authenticated
+  using (true);
+
 -- Política: service_role tiene acceso total (usado por el webhook de Cal.com)
 create policy "service role puede todo en citas"
   on citas for all

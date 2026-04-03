@@ -101,6 +101,9 @@ export default function CalendarioCliente({
   const [guardando, setGuardando] = useState(false)
   const [errorModal, setErrorModal] = useState('')
 
+  const [modalEliminar, setModalEliminar] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
+
   // Agrupación de citas por día (clave YYYY-MM-DD local)
   const citasMap = useMemo(() => {
     const map = new Map<string, CitaConPaciente[]>()
@@ -195,6 +198,25 @@ export default function CalendarioCliente({
     })
     setErrorModal('')
     setModalAbierto(true)
+  }
+
+  async function handleEliminarCita() {
+    if (!selectedCita) return
+    setEliminando(true)
+    const supabase = createClient()
+
+    const { error } = await supabase.from('citas').delete().eq('id', selectedCita.id)
+
+    setEliminando(false)
+    if (error) {
+      setModalEliminar(false)
+      return
+    }
+
+    setCitas((prev) => prev.filter((c) => c.id !== selectedCita.id))
+    setEventos((prev) => prev.filter((e) => e.id !== selectedCita.id))
+    setModalEliminar(false)
+    closePanel()
   }
 
   async function handleGuardarCita() {
@@ -485,6 +507,15 @@ export default function CalendarioCliente({
                       </button>
                     </div>
                   )}
+
+                  <div className="pt-1">
+                    <button
+                      onClick={() => setModalEliminar(true)}
+                      className="w-full py-2.5 rounded-lg text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                    >
+                      Eliminar cita
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Vista de lista */
@@ -645,6 +676,51 @@ export default function CalendarioCliente({
                 style={{ backgroundColor: primary }}
               >
                 {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal: Confirmar eliminación de cita ─── */}
+      {modalEliminar && selectedCita && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="px-6 pt-6 pb-2 flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold text-gray-900">¿Eliminar esta cita?</h2>
+              <p className="text-sm text-gray-500">
+                Se eliminará la cita de{' '}
+                <span className="font-medium text-gray-700">
+                  {selectedCita.pacientes?.nombre ?? 'este paciente'}
+                </span>{' '}
+                del{' '}
+                {new Date(selectedCita.fecha_inicio).toLocaleDateString('es-CL', {
+                  weekday: 'long', day: 'numeric', month: 'long',
+                })}{' '}
+                a las {formatHora(selectedCita.fecha_inicio)}.
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 flex gap-3">
+              <button
+                onClick={() => setModalEliminar(false)}
+                disabled={eliminando}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEliminarCita}
+                disabled={eliminando}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-60"
+              >
+                {eliminando ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
           </div>
