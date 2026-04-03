@@ -16,11 +16,13 @@ Sistema web de gestión clínica diseñado para profesionales de salud independi
 ![Lista de pacientes](docs/screenshots/pacientes-lista.png)
 
 **Ficha de paciente**
-![Ficha de paciente](docs/screenshots/pacientes-ficha.png)
-![Ficha de paciente](docs/screenshots/pacientes-ficha2.png)
+![Ficha de paciente - parte superior](docs/screenshots/pacientes-ficha.png)
+![Ficha de paciente - parte inferior](docs/screenshots/pacientes-ficha2.png)
 
 **Calendario de citas**
-![Calendario](docs/screenshots/calendario.png)
+![Calendario mensual](docs/screenshots/calendario.png)
+![Calendario con panel lateral de citas del día](docs/screenshots/calendario-side-bar.png)
+![Calendario con detalle de cita seleccionada](docs/screenshots/calendario-side-bar-detalle-cita.png)
 
 ---
 
